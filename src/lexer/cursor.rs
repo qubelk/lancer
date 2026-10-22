@@ -20,8 +20,4 @@ impl<'a> Cursor<'a> {
 	pub fn peek(&mut self) -> Option<&char> {
 		self.chars.peek()
 	}
-
-	pub fn is_eof(&mut self) -> bool {
-		self.chars.peek().is_none()
-	}
 }

@@ -15,5 +15,4 @@ pub enum TokenKind {
 	Literal(LiteralKind),
 	Assign,
 	Semicolon,
-	Eof,
 }
