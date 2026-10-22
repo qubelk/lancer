@@ -94,26 +94,26 @@ impl<'a> Lexer<'a> {
 
 		match chars.next() {
 			Some(ch) if ch == '_' || ch.is_alphanumeric() => {}
-			_ => return Some(LexerError::InvalidIndent),
+			_ => return Some(LexerError::InvalidIdent),
 		}
 
 		for ch in ident.chars() {
 			if !(ch.is_alphanumeric() || ch == '_') {
-				return Some(LexerError::InvalidIndent);
+				return Some(LexerError::InvalidIdent);
 			}
 		}
 
 		None
 	}
 
-	fn match_keyword(&self, indent: &str, span: TokenSpan) -> Result<Token, LexerError> {
-		match indent {
+	fn match_keyword(&self, ident: &str, span: TokenSpan) -> Result<Token, LexerError> {
+		match ident {
 			"var" => Ok(Token {
 				kind: TokenKind::KeywordVar,
 				span,
 			}),
 			_ => {
-				if let Some(e) = self.validate_ident(indent) {
+				if let Some(e) = self.validate_ident(ident) {
 					return Err(e);
 				}
 
@@ -125,7 +125,7 @@ impl<'a> Lexer<'a> {
 		}
 	}
 
-	fn lex_indent(&mut self) -> Result<Token, LexerError> {
+	fn lex_ident(&mut self) -> Result<Token, LexerError> {
 		let start = self.cursor.pos();
 		let mut val = String::new();
 
@@ -166,7 +166,7 @@ impl<'a> Iterator for Lexer<'a> {
 				self.cursor.next();
 				TokenKind::Semicolon
 			}
-			_ => return Some(self.lex_indent()),
+			_ => return Some(self.lex_ident()),
 		};
 
 		Some(Ok(Token {
@@ -181,7 +181,7 @@ impl<'a> Iterator for Lexer<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum LexerError {
-	InvalidIndent,
+	InvalidIdent,
 }
 
 #[cfg(test)]
@@ -251,10 +251,10 @@ mod tests {
 	}
 
 	#[test]
-	fn lexer_lex_indent_var() {
+	fn lexer_lex_ident_var() {
 		let mut l = Lexer::new("var");
 		assert_eq!(
-			l.lex_indent().unwrap(),
+			l.lex_ident().unwrap(),
 			Token {
 				kind: TokenKind::KeywordVar,
 				span: TokenSpan { start: 0, end: 3 }
@@ -263,10 +263,10 @@ mod tests {
 	}
 
 	#[test]
-	fn lexer_lex_indent_var_with_spaces() {
+	fn lexer_lex_ident_var_with_spaces() {
 		let mut l = Lexer::new("var ");
 		assert_eq!(
-			l.lex_indent().unwrap(),
+			l.lex_ident().unwrap(),
 			Token {
 				kind: TokenKind::KeywordVar,
 				span: TokenSpan { start: 0, end: 3 }
@@ -275,10 +275,10 @@ mod tests {
 	}
 
 	#[test]
-	fn lexer_lex_indent_indentifier() {
+	fn lexer_lex_ident_identifier() {
 		let mut l = Lexer::new("variable_0");
 		assert_eq!(
-			l.lex_indent().unwrap(),
+			l.lex_ident().unwrap(),
 			Token {
 				kind: TokenKind::Ident,
 				span: TokenSpan { start: 0, end: 10 }
@@ -287,9 +287,9 @@ mod tests {
 	}
 
 	#[test]
-	fn lexer_lex_indent_indentifier_invalid() {
+	fn lexer_lex_ident_identifier_invalid() {
 		let mut l = Lexer::new("#invalid$");
-		assert_eq!(l.lex_indent().unwrap_err(), LexerError::InvalidIndent);
+		assert_eq!(l.lex_ident().unwrap_err(), LexerError::InvalidIdent);
 	}
 
 	#[test]
