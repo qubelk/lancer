@@ -6,6 +6,7 @@ use cursor::Cursor;
 use token::LiteralKind;
 use token::Token;
 use token::TokenKind;
+use token::TokenSpan;
 
 pub struct Lexer<'a> {
 	cursor: Cursor<'a>,
@@ -49,6 +50,8 @@ impl<'a> Lexer<'a> {
 	}
 
 	fn lex_integer(&mut self) -> Result<Token, LexerError> {
+		let start = self.cursor.pos();
+
 		while let Some(&ch) = self.cursor.peek() {
 			if ch.is_ascii_digit() {
 				self.cursor.next();
@@ -59,10 +62,16 @@ impl<'a> Lexer<'a> {
 
 		Ok(Token {
 			kind: TokenKind::Literal(LiteralKind::Int),
+			span: TokenSpan {
+				start,
+				end: self.cursor.pos(),
+			},
 		})
 	}
 
 	fn lex_float(&mut self) -> Result<Token, LexerError> {
+		let start = self.cursor.pos();
+
 		while let Some(&ch) = self.cursor.peek() {
 			if ch.is_ascii_digit() || ch == '.' {
 				self.cursor.next();
@@ -73,22 +82,30 @@ impl<'a> Lexer<'a> {
 
 		Ok(Token {
 			kind: TokenKind::Literal(LiteralKind::Float),
+			span: TokenSpan {
+				start,
+				end: self.cursor.pos(),
+			},
 		})
 	}
 
-	fn match_keyword(&mut self, indent: &str) -> Token {
+	fn match_keyword(&mut self, indent: &str, span: TokenSpan) -> Token {
 		match indent {
 			"var" => Token {
 				kind: TokenKind::KeywordVar,
+				span,
 			},
 			_ => Token {
 				kind: TokenKind::Indent(indent.to_string()),
+				span,
 			},
 		}
 	}
 
 	fn lex_indent(&mut self) -> Result<Token, LexerError> {
+		let start = self.cursor.pos();
 		let mut val = String::new();
+
 		while let Some(&ch) = self.cursor.peek() {
 			if ch.is_alphanumeric() || ch == '_' {
 				val.push(ch);
@@ -98,7 +115,13 @@ impl<'a> Lexer<'a> {
 			}
 		}
 
-		Ok(self.match_keyword(&val))
+		Ok(self.match_keyword(
+			&val,
+			TokenSpan {
+				start,
+				end: self.cursor.pos(),
+			},
+		))
 	}
 }
 
@@ -106,6 +129,7 @@ impl<'a> Iterator for Lexer<'a> {
 	type Item = Result<Token, LexerError>;
 
 	fn next(&mut self) -> Option<Self::Item> {
+		let start = self.cursor.pos();
 		self.skip_whitespaces();
 		self.skip_comments();
 
@@ -122,7 +146,13 @@ impl<'a> Iterator for Lexer<'a> {
 			_ => return Some(self.lex_indent()),
 		};
 
-		Some(Ok(Token { kind }))
+		Some(Ok(Token {
+			kind,
+			span: TokenSpan {
+				start,
+				end: self.cursor.pos(),
+			},
+		}))
 	}
 }
 
@@ -141,6 +171,7 @@ mod tests {
 		let mut l = Lexer::new("     l");
 		l.skip_whitespaces();
 		assert_eq!(l.cursor.peek(), Some(&'l'));
+		assert_eq!(l.cursor.pos(), 5);
 	}
 
 	#[test]
@@ -148,6 +179,7 @@ mod tests {
 		let mut l = Lexer::new("// \n");
 		l.skip_comments();
 		assert_eq!(l.cursor.peek(), Some(&'\n'));
+		assert_eq!(l.cursor.pos(), 3);
 	}
 
 	#[test]
@@ -155,14 +187,18 @@ mod tests {
 		let mut l = Lexer::new("//  ");
 		l.skip_comments();
 		assert_eq!(l.cursor.peek(), None);
+		assert_eq!(l.cursor.pos(), 4);
 	}
 
 	#[test]
 	fn lexer_lex_integer() {
 		let mut l = Lexer::new("69");
 		assert_eq!(
-			l.lex_integer().unwrap().kind,
-			TokenKind::Literal(LiteralKind::Int)
+			l.lex_integer().unwrap(),
+			Token {
+				kind: TokenKind::Literal(LiteralKind::Int),
+				span: TokenSpan { start: 0, end: 2 }
+			}
 		);
 	}
 
@@ -170,8 +206,11 @@ mod tests {
 	fn lexer_lex_float() {
 		let mut l = Lexer::new("69.9");
 		assert_eq!(
-			l.lex_float().unwrap().kind,
-			TokenKind::Literal(LiteralKind::Float)
+			l.lex_float().unwrap(),
+			Token {
+				kind: TokenKind::Literal(LiteralKind::Float),
+				span: TokenSpan { start: 0, end: 4 }
+			}
 		);
 	}
 
@@ -179,29 +218,47 @@ mod tests {
 	fn lexer_lex_float_without_end() {
 		let mut l = Lexer::new("0.");
 		assert_eq!(
-			l.lex_float().unwrap().kind,
-			TokenKind::Literal(LiteralKind::Float)
+			l.lex_float().unwrap(),
+			Token {
+				kind: TokenKind::Literal(LiteralKind::Float),
+				span: TokenSpan { start: 0, end: 2 },
+			}
 		);
 	}
 
 	#[test]
 	fn lexer_lex_indent_var() {
 		let mut l = Lexer::new("var");
-		assert_eq!(l.lex_indent().unwrap().kind, TokenKind::KeywordVar);
+		assert_eq!(
+			l.lex_indent().unwrap(),
+			Token {
+				kind: TokenKind::KeywordVar,
+				span: TokenSpan { start: 0, end: 3 }
+			}
+		);
 	}
 
 	#[test]
 	fn lexer_lex_indent_var_with_spaces() {
 		let mut l = Lexer::new("var ");
-		assert_eq!(l.lex_indent().unwrap().kind, TokenKind::KeywordVar);
+		assert_eq!(
+			l.lex_indent().unwrap(),
+			Token {
+				kind: TokenKind::KeywordVar,
+				span: TokenSpan { start: 0, end: 3 }
+			}
+		);
 	}
 
 	#[test]
 	fn lexer_lex_indent_indentifier() {
 		let mut l = Lexer::new("variable_0");
 		assert_eq!(
-			l.lex_indent().unwrap().kind,
-			TokenKind::Indent("variable_0".to_string()),
+			l.lex_indent().unwrap(),
+			Token {
+				kind: TokenKind::Indent("variable_0".to_string()),
+				span: TokenSpan { start: 0, end: 10 }
+			},
 		)
 	}
 
@@ -213,10 +270,44 @@ mod tests {
 			vec.push(tok.unwrap());
 		}
 
-		assert_eq!(vec[0].kind, TokenKind::KeywordVar);
-		assert_eq!(vec[1].kind, TokenKind::Indent("x".to_string()));
-		assert_eq!(vec[2].kind, TokenKind::Assign);
-		assert_eq!(vec[3].kind, TokenKind::Literal(LiteralKind::Float));
-		assert_eq!(vec[4].kind, TokenKind::Semicolon);
+		assert_eq!(
+			vec[0],
+			Token {
+				kind: TokenKind::KeywordVar,
+				span: TokenSpan { start: 0, end: 3 }
+			}
+		);
+
+		assert_eq!(
+			vec[1],
+			Token {
+				kind: TokenKind::Indent("x".to_string()),
+				span: TokenSpan { start: 4, end: 5 }
+			}
+		);
+
+		assert_eq!(
+			vec[2],
+			Token {
+				kind: TokenKind::Assign,
+				span: TokenSpan { start: 5, end: 7 }
+			}
+		);
+
+		assert_eq!(
+			vec[3],
+			Token {
+				kind: TokenKind::Literal(LiteralKind::Float),
+				span: TokenSpan { start: 8, end: 9 },
+			}
+		);
+
+		assert_eq!(
+			vec[4],
+			Token {
+				kind: TokenKind::Semicolon,
+				span: TokenSpan { start: 9, end: 10 }
+			}
+		);
 	}
 }

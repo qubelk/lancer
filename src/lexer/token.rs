@@ -1,5 +1,7 @@
+#[derive(Debug, PartialEq)]
 pub struct Token {
 	pub kind: TokenKind,
+	pub span: TokenSpan,
 }
 
 #[derive(Debug, PartialEq)]
@@ -15,4 +17,10 @@ pub enum TokenKind {
 	Literal(LiteralKind),
 	Assign,
 	Semicolon,
+}
+
+#[derive(Debug, PartialEq)]
+pub struct TokenSpan {
+	pub start: usize,
+	pub end: usize,
 }
