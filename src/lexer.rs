@@ -1,7 +1,7 @@
-use crate::lexer::cursor::Cursor;
-
 mod cursor;
 mod token;
+
+use cursor::Cursor;
 
 pub struct Lexer<'a> {
 	cursor: Cursor<'a>,
