@@ -3,11 +3,16 @@ pub struct Token {
 }
 
 #[derive(Debug, PartialEq)]
+pub enum LiteralKind {
+	Int,
+	Float,
+}
+
+#[derive(Debug, PartialEq)]
 pub enum TokenKind {
 	KeywordVar,
 	Indent(String),
-	LiteralInt(i64),
-	LiteralFloat(f64),
+	Literal(LiteralKind),
 	Assign,
 	Semicolon,
 	Eof,

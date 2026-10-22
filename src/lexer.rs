@@ -1,11 +1,11 @@
 mod cursor;
 mod token;
 
-use std::collections::HashMap;
-
 use cursor::Cursor;
 
-use crate::lexer::token::{Token, TokenKind};
+use token::LiteralKind;
+use token::Token;
+use token::TokenKind;
 
 pub struct Lexer<'a> {
 	cursor: Cursor<'a>,
@@ -49,10 +49,8 @@ impl<'a> Lexer<'a> {
 	}
 
 	fn lex_integer(&mut self) -> Result<Token, LexerError> {
-		let mut val = String::new();
 		while let Some(&ch) = self.cursor.peek() {
 			if ch.is_ascii_digit() {
-				val.push(ch);
 				self.cursor.next();
 			} else {
 				break;
@@ -60,15 +58,13 @@ impl<'a> Lexer<'a> {
 		}
 
 		Ok(Token {
-			kind: TokenKind::LiteralInt(val.parse().unwrap()),
+			kind: TokenKind::Literal(LiteralKind::Int),
 		})
 	}
 
 	fn lex_float(&mut self) -> Result<Token, LexerError> {
-		let mut val = String::new();
 		while let Some(&ch) = self.cursor.peek() {
 			if ch.is_ascii_digit() || ch == '.' {
-				val.push(ch);
 				self.cursor.next();
 			} else {
 				break;
@@ -76,7 +72,7 @@ impl<'a> Lexer<'a> {
 		}
 
 		Ok(Token {
-			kind: TokenKind::LiteralFloat(val.parse::<f64>().unwrap()),
+			kind: TokenKind::Literal(LiteralKind::Float),
 		})
 	}
 
@@ -106,12 +102,38 @@ impl<'a> Lexer<'a> {
 	}
 }
 
+impl<'a> Iterator for Lexer<'a> {
+	type Item = Result<Token, LexerError>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.skip_whitespaces();
+		self.skip_comments();
+
+		let kind = match self.cursor.peek()? {
+			'0'..='9' => return Some(self.lex_float()),
+			'=' => {
+				self.cursor.next();
+				TokenKind::Assign
+			}
+			';' => {
+				self.cursor.next();
+				TokenKind::Semicolon
+			}
+			_ => return Some(self.lex_indent()),
+		};
+
+		Some(Ok(Token { kind }))
+	}
+}
+
 /// TODO: Create Lexer Errors
 #[derive(Debug)]
-enum LexerError {}
+pub enum LexerError {}
 
 #[cfg(test)]
 mod tests {
+	use crate::lexer::token::LiteralKind;
+
 	use super::*;
 
 	#[test]
@@ -138,19 +160,28 @@ mod tests {
 	#[test]
 	fn lexer_lex_integer() {
 		let mut l = Lexer::new("69");
-		assert_eq!(l.lex_integer().unwrap().kind, TokenKind::LiteralInt(69));
+		assert_eq!(
+			l.lex_integer().unwrap().kind,
+			TokenKind::Literal(LiteralKind::Int)
+		);
 	}
 
 	#[test]
 	fn lexer_lex_float() {
 		let mut l = Lexer::new("69.9");
-		assert_eq!(l.lex_float().unwrap().kind, TokenKind::LiteralFloat(69.9));
+		assert_eq!(
+			l.lex_float().unwrap().kind,
+			TokenKind::Literal(LiteralKind::Float)
+		);
 	}
 
 	#[test]
 	fn lexer_lex_float_without_end() {
 		let mut l = Lexer::new("0.");
-		assert_eq!(l.lex_float().unwrap().kind, TokenKind::LiteralFloat(0.));
+		assert_eq!(
+			l.lex_float().unwrap().kind,
+			TokenKind::Literal(LiteralKind::Float)
+		);
 	}
 
 	#[test]
@@ -172,5 +203,20 @@ mod tests {
 			l.lex_indent().unwrap().kind,
 			TokenKind::Indent("variable_0".to_string()),
 		)
+	}
+
+	#[test]
+	fn lexer_iter() {
+		let mut vec: Vec<Token> = vec![];
+		let l = Lexer::new("var x = 5;");
+		for tok in l {
+			vec.push(tok.unwrap());
+		}
+
+		assert_eq!(vec[0].kind, TokenKind::KeywordVar);
+		assert_eq!(vec[1].kind, TokenKind::Indent("x".to_string()));
+		assert_eq!(vec[2].kind, TokenKind::Assign);
+		assert_eq!(vec[3].kind, TokenKind::Literal(LiteralKind::Float));
+		assert_eq!(vec[4].kind, TokenKind::Semicolon);
 	}
 }
