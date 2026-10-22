@@ -129,10 +129,10 @@ impl<'a> Iterator for Lexer<'a> {
 	type Item = Result<Token, LexerError>;
 
 	fn next(&mut self) -> Option<Self::Item> {
-		let start = self.cursor.pos();
 		self.skip_whitespaces();
 		self.skip_comments();
 
+		let start = self.cursor.pos();
 		let kind = match self.cursor.peek()? {
 			'0'..='9' => return Some(self.lex_float()),
 			'=' => {
@@ -290,7 +290,7 @@ mod tests {
 			vec[2],
 			Token {
 				kind: TokenKind::Assign,
-				span: TokenSpan { start: 5, end: 7 }
+				span: TokenSpan { start: 6, end: 7 }
 			}
 		);
 
