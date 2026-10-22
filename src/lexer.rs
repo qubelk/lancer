@@ -89,16 +89,39 @@ impl<'a> Lexer<'a> {
 		})
 	}
 
-	fn match_keyword(&mut self, indent: &str, span: TokenSpan) -> Token {
+	fn validate_ident(&self, ident: &str) -> Option<LexerError> {
+		let mut chars = ident.chars();
+
+		match chars.next() {
+			Some(ch) if ch == '_' || ch.is_alphanumeric() => {}
+			_ => return Some(LexerError::InvalidIndent),
+		}
+
+		for ch in ident.chars() {
+			if !(ch.is_alphanumeric() || ch == '_') {
+				return Some(LexerError::InvalidIndent);
+			}
+		}
+
+		None
+	}
+
+	fn match_keyword(&self, indent: &str, span: TokenSpan) -> Result<Token, LexerError> {
 		match indent {
-			"var" => Token {
+			"var" => Ok(Token {
 				kind: TokenKind::KeywordVar,
 				span,
-			},
-			_ => Token {
-				kind: TokenKind::Indent(indent.to_string()),
-				span,
-			},
+			}),
+			_ => {
+				if let Some(e) = self.validate_ident(indent) {
+					return Err(e);
+				}
+
+				Ok(Token {
+					kind: TokenKind::Ident,
+					span,
+				})
+			}
 		}
 	}
 
@@ -115,13 +138,13 @@ impl<'a> Lexer<'a> {
 			}
 		}
 
-		Ok(self.match_keyword(
+		self.match_keyword(
 			&val,
 			TokenSpan {
 				start,
 				end: self.cursor.pos(),
 			},
-		))
+		)
 	}
 }
 
@@ -156,9 +179,10 @@ impl<'a> Iterator for Lexer<'a> {
 	}
 }
 
-/// TODO: Create Lexer Errors
-#[derive(Debug)]
-pub enum LexerError {}
+#[derive(Debug, PartialEq)]
+pub enum LexerError {
+	InvalidIndent,
+}
 
 #[cfg(test)]
 mod tests {
@@ -256,10 +280,16 @@ mod tests {
 		assert_eq!(
 			l.lex_indent().unwrap(),
 			Token {
-				kind: TokenKind::Indent("variable_0".to_string()),
+				kind: TokenKind::Ident,
 				span: TokenSpan { start: 0, end: 10 }
 			},
 		)
+	}
+
+	#[test]
+	fn lexer_lex_indent_indentifier_invalid() {
+		let mut l = Lexer::new("#invalid$");
+		assert_eq!(l.lex_indent().unwrap_err(), LexerError::InvalidIndent);
 	}
 
 	#[test]
@@ -281,7 +311,7 @@ mod tests {
 		assert_eq!(
 			vec[1],
 			Token {
-				kind: TokenKind::Indent("x".to_string()),
+				kind: TokenKind::Ident,
 				span: TokenSpan { start: 4, end: 5 }
 			}
 		);

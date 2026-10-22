@@ -13,7 +13,7 @@ pub enum LiteralKind {
 #[derive(Debug, PartialEq)]
 pub enum TokenKind {
 	KeywordVar,
-	Indent(String),
+	Ident,
 	Literal(LiteralKind),
 	Assign,
 	Semicolon,
