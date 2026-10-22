@@ -1,6 +1,7 @@
 use std::iter::Peekable;
 use std::str::Chars;
 
+#[derive(Clone)]
 pub struct Cursor<'a> {
 	chars: Peekable<Chars<'a>>,
 }

@@ -1,18 +1,14 @@
 pub struct Token {
 	pub kind: TokenKind,
-	pub span: TokenSpan,
 }
 
-enum TokenKind {
+#[derive(Debug, PartialEq)]
+pub enum TokenKind {
 	KeywordVar,
-	Indent,
-	LiteralInt,
+	Indent(String),
+	LiteralInt(i64),
+	LiteralFloat(f64),
 	Assign,
 	Semicolon,
 	Eof,
-}
-
-struct TokenSpan {
-	start: usize,
-	end: usize,
 }
