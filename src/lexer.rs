@@ -76,6 +76,8 @@ impl<'a> Lexer<'a> {
 				while let Some(&ch) = self.cursor.peek() {
 					if ch.is_ascii_digit() {
 						self.cursor.next();
+					} else if ch == '.' {
+						return Err(LexerError::UnexpectedChar);
 					}
 				}
 			} else {
@@ -233,6 +235,12 @@ mod tests {
 	#[test]
 	fn lexer_lex_float_without_end() {
 		let mut l = Lexer::new("0.");
+		assert_eq!(l.lex_number(), Err(LexerError::UnexpectedChar));
+	}
+
+	#[test]
+	fn lexer_lex_float_with_multiple_dots() {
+		let mut l = Lexer::new("1.2.3");
 		assert_eq!(l.lex_number(), Err(LexerError::UnexpectedChar));
 	}
 
