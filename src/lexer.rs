@@ -78,6 +78,8 @@ impl<'a> Lexer<'a> {
 						self.cursor.next();
 					}
 				}
+			} else {
+				return Err(LexerError::UnexpectedChar);
 			}
 		}
 		Ok(Token {
@@ -232,13 +234,7 @@ mod tests {
 	#[test]
 	fn lexer_lex_float_without_end() {
 		let mut l = Lexer::new("0.");
-		assert_eq!(
-			l.lex_number().unwrap(),
-			Token {
-				kind: TokenKind::Literal(LiteralKind::Float),
-				span: TokenSpan { start: 0, end: 2 },
-			}
-		);
+		assert_eq!(l.lex_number(), Err(LexerError::UnexpectedChar));
 	}
 
 	#[test]
