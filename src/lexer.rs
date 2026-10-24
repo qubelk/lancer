@@ -106,13 +106,13 @@ impl<'a> Lexer<'a> {
 		})
 	}
 
-	fn match_keyword(ident: &str, span: TokenSpan) -> Result<Token, LexerError> {
+	fn match_keyword(ident: &str, span: TokenSpan) -> Token {
 		let kind = match ident {
 			"var" => TokenKind::KeywordVar,
 			_ => TokenKind::Ident,
 		};
 
-		Ok(Token { kind, span })
+		Token { kind, span }
 	}
 
 	fn lex_ident(&mut self) -> Result<Token, LexerError> {
@@ -155,13 +155,13 @@ impl<'a> Lexer<'a> {
 			}
 		}
 
-		Self::match_keyword(
+		Ok(Self::match_keyword(
 			&val,
 			TokenSpan {
 				start,
 				end: self.cursor.pos(),
 			},
-		)
+		))
 	}
 
 	fn skip_trivia(&mut self) {
