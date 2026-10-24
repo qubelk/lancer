@@ -140,7 +140,7 @@ impl<'a> Lexer<'a> {
 		self.cursor.next();
 
 		while let Some(ch) = self.cursor.peek() {
-			if ch.is_alphanumeric() || ch == '_' {
+			if ch.is_ascii_alphanumeric() || ch == '_' {
 				val.push(ch);
 				self.cursor.next();
 			} else {
@@ -182,7 +182,9 @@ impl<'a> Iterator for Lexer<'a> {
 				self.cursor.next();
 				TokenKind::Semicolon
 			}
-			ch if ch == '_' || ch.is_alphanumeric() => return Some(self.lex_ident()),
+			ch if ch == '_' || ch.is_ascii_alphanumeric() => {
+				return Some(self.lex_ident());
+			}
 			ch => {
 				self.cursor.next();
 				return Some(Err(LexerError::UnexpectedChar(
@@ -328,9 +330,24 @@ mod tests {
 	fn lexer_lex_ident_identifier_invalid() {
 		let mut l = Lexer::new("#invalid$");
 		assert_eq!(
-			l.lex_ident().unwrap_err(),
-			LexerError::UnexpectedChar('#', TokenSpan { start: 0, end: 1 })
+			l.lex_ident(),
+			Err(LexerError::UnexpectedChar(
+				'#',
+				TokenSpan { start: 0, end: 1 }
+			))
 		);
+	}
+
+	#[test]
+	fn lexer_lex_ident_start_from_number() {
+		let mut l = Lexer::new("1_ident");
+		assert_eq!(
+			l.lex_ident(),
+			Err(LexerError::UnexpectedChar(
+				'1',
+				TokenSpan { start: 0, end: 1 }
+			))
+		)
 	}
 
 	#[test]
