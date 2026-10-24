@@ -27,7 +27,8 @@ impl Parser {
 
 	fn parse_expr(&mut self) -> Result<Expr, ParseError> {
 		match self.cursor.peek_kind() {
-			Some(TokenKind::Literal(token::LiteralKind::Any)) => self.parse_literal(),
+			Some(TokenKind::Literal(_)) => self.parse_literal(),
+			Some(TokenKind::Ident) => self.parse_ident(),
 			_ => todo!(),
 		}
 	}
@@ -60,6 +61,17 @@ impl Parser {
 				None,
 				TokenKind::Literal(token::LiteralKind::Any),
 			)),
+		}
+	}
+
+	fn parse_ident(&mut self) -> Result<Expr, ParseError> {
+		match self.cursor.peek() {
+			Some(Token {
+				kind: TokenKind::Ident,
+				span: _,
+				orig,
+			}) => Ok(Expr::Ident(orig.to_string())),
+			_ => Err(ParseError::ExpectedIdent),
 		}
 	}
 
