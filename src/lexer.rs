@@ -1,7 +1,7 @@
-mod cursor;
-mod token;
+mod lexer_cursor;
+pub mod token;
 
-use cursor::Cursor;
+use lexer_cursor::LexerCursor;
 
 use token::LiteralKind;
 use token::Token;
@@ -9,14 +9,14 @@ use token::TokenKind;
 use token::TokenSpan;
 
 pub struct Lexer<'a> {
-	cursor: Cursor<'a>,
+	cursor: LexerCursor<'a>,
 	eof_emitted: bool,
 }
 
 impl<'a> Lexer<'a> {
 	pub fn new(input: &'a str) -> Self {
 		Self {
-			cursor: Cursor::new(input),
+			cursor: LexerCursor::new(input),
 			eof_emitted: false,
 		}
 	}

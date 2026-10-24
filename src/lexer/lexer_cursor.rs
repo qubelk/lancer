@@ -1,10 +1,10 @@
 #[derive(Clone)]
-pub struct Cursor<'a> {
+pub struct LexerCursor<'a> {
 	input: &'a str,
 	pos: usize,
 }
 
-impl<'a> Cursor<'a> {
+impl<'a> LexerCursor<'a> {
 	pub fn new(input: &'a str) -> Self {
 		Self { input, pos: 0 }
 	}

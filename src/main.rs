@@ -1,4 +1,5 @@
 mod lexer;
+mod parser;
 
 use std::fs::File;
 use std::io::Read;
