@@ -17,6 +17,7 @@ pub enum TokenKind {
 	Literal(LiteralKind),
 	Assign,
 	Semicolon,
+	Eof,
 }
 
 #[derive(Debug, PartialEq)]
