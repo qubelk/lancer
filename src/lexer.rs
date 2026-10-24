@@ -378,6 +378,18 @@ mod tests {
 	}
 
 	#[test]
+	fn lexer_lex_ident_empty() {
+		let mut l = Lexer::new("");
+		assert_eq!(
+			l.lex_ident(),
+			Err(LexerError::UnexpectedChar(
+				'\0',
+				TokenSpan { start: 0, end: 0 }
+			))
+		)
+	}
+
+	#[test]
 	fn lexer_iter() {
 		let mut vec: Vec<Token> = vec![];
 		let l = Lexer::new("var x = 5;");
@@ -472,6 +484,55 @@ mod tests {
 				kind: TokenKind::Semicolon,
 				span: TokenSpan { start: 11, end: 12 }
 			}
+		);
+	}
+
+	#[test]
+	fn lexer_iter_with_invalid_ident() {
+		let mut vec: Vec<Result<Token, LexerError>> = vec![];
+		let l = Lexer::new("var $ = 5;");
+		for tok in l {
+			vec.push(tok);
+		}
+
+		assert_eq!(
+			vec[0],
+			Ok(Token {
+				kind: TokenKind::KeywordVar,
+				span: TokenSpan { start: 0, end: 3 }
+			})
+		);
+
+		assert_eq!(
+			vec[1],
+			Err(LexerError::UnexpectedChar(
+				'$',
+				TokenSpan { start: 4, end: 5 }
+			))
+		);
+
+		assert_eq!(
+			vec[2],
+			Ok(Token {
+				kind: TokenKind::Assign,
+				span: TokenSpan { start: 6, end: 7 }
+			})
+		);
+
+		assert_eq!(
+			vec[3],
+			Ok(Token {
+				kind: TokenKind::Literal(LiteralKind::Int),
+				span: TokenSpan { start: 8, end: 9 },
+			})
+		);
+
+		assert_eq!(
+			vec[4],
+			Ok(Token {
+				kind: TokenKind::Semicolon,
+				span: TokenSpan { start: 9, end: 10 }
+			})
 		);
 	}
 }
