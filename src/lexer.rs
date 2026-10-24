@@ -3,9 +3,9 @@ pub mod token;
 
 use lexer_cursor::LexerCursor;
 
-use token::LiteralKind;
 use token::Token;
 use token::TokenKind;
+use token::TokenLiteralKind;
 use token::TokenSpan;
 
 pub struct Lexer<'a> {
@@ -45,13 +45,13 @@ impl<'a> Lexer<'a> {
 		}
 	}
 
-	fn lex_float(&mut self) -> Result<LiteralKind, LexerError> {
+	fn lex_float(&mut self) -> Result<TokenLiteralKind, LexerError> {
 		let dot_position = self.cursor.pos();
 		self.cursor.next();
 
 		match self.cursor.peek() {
 			Some(ch) if ch.is_ascii_digit() => {
-				let kind = LiteralKind::Float;
+				let kind = TokenLiteralKind::Float;
 				self.cursor.next();
 				while let Some(ch) = self.cursor.peek() {
 					if ch.is_ascii_digit() {
@@ -93,7 +93,7 @@ impl<'a> Lexer<'a> {
 			}
 		}
 
-		let mut kind = LiteralKind::Int;
+		let mut kind = TokenLiteralKind::Int;
 
 		if self.cursor.peek() == Some('.') {
 			kind = self.lex_float()?;
@@ -243,7 +243,7 @@ pub enum LexerError {
 
 #[cfg(test)]
 mod tests {
-	use crate::lexer::token::LiteralKind;
+	use crate::lexer::token::TokenLiteralKind;
 
 	use super::*;
 
@@ -293,7 +293,7 @@ mod tests {
 		assert_eq!(
 			l.lex_number().unwrap(),
 			Token {
-				kind: TokenKind::Literal(LiteralKind::Int),
+				kind: TokenKind::Literal(TokenLiteralKind::Int),
 				span: TokenSpan { start: 0, end: 2 },
 				orig: "69".to_string(),
 			}
@@ -306,7 +306,7 @@ mod tests {
 		assert_eq!(
 			l.lex_number().unwrap(),
 			Token {
-				kind: TokenKind::Literal(LiteralKind::Float),
+				kind: TokenKind::Literal(TokenLiteralKind::Float),
 				span: TokenSpan { start: 0, end: 4 },
 				orig: "69.9".to_string(),
 			}
@@ -450,7 +450,7 @@ mod tests {
 		assert_eq!(
 			vec[3],
 			Token {
-				kind: TokenKind::Literal(LiteralKind::Int),
+				kind: TokenKind::Literal(TokenLiteralKind::Int),
 				span: TokenSpan { start: 8, end: 9 },
 				orig: "5".to_string(),
 			}
@@ -513,7 +513,7 @@ mod tests {
 		assert_eq!(
 			vec[3],
 			Token {
-				kind: TokenKind::Literal(LiteralKind::Float),
+				kind: TokenKind::Literal(TokenLiteralKind::Float),
 				span: TokenSpan { start: 8, end: 11 },
 				orig: "5.5".to_string(),
 			}
@@ -575,7 +575,7 @@ mod tests {
 		assert_eq!(
 			vec[3],
 			Ok(Token {
-				kind: TokenKind::Literal(LiteralKind::Int),
+				kind: TokenKind::Literal(TokenLiteralKind::Int),
 				span: TokenSpan { start: 8, end: 9 },
 				orig: "5".to_string(),
 			})

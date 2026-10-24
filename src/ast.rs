@@ -1,10 +1,10 @@
-pub enum LiteralKind {
+pub enum AstLiteralKind {
 	Int(i64),
 	Float(f64),
 }
 
 pub enum Expr {
-	Literal(LiteralKind),
+	Literal(AstLiteralKind),
 	Ident(String),
 	Binary {
 		op: BinaryOp,

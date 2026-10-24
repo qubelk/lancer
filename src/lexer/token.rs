@@ -6,9 +6,7 @@ pub struct Token {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum LiteralKind {
-	// This need for error handling
-	Any,
+pub enum TokenLiteralKind {
 	Int,
 	Float,
 }
@@ -17,7 +15,7 @@ pub enum LiteralKind {
 pub enum TokenKind {
 	KeywordVar,
 	Ident,
-	Literal(LiteralKind),
+	Literal(TokenLiteralKind),
 	Assign,
 	Semicolon,
 	Eof,
