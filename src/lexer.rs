@@ -405,4 +405,53 @@ mod tests {
 			}
 		);
 	}
+
+	#[test]
+	fn lexer_iter_with_float() {
+		let mut vec: Vec<Token> = vec![];
+		let l = Lexer::new("var x = 5.5;");
+		for tok in l {
+			vec.push(tok.unwrap());
+		}
+
+		assert_eq!(
+			vec[0],
+			Token {
+				kind: TokenKind::KeywordVar,
+				span: TokenSpan { start: 0, end: 3 }
+			}
+		);
+
+		assert_eq!(
+			vec[1],
+			Token {
+				kind: TokenKind::Ident,
+				span: TokenSpan { start: 4, end: 5 }
+			}
+		);
+
+		assert_eq!(
+			vec[2],
+			Token {
+				kind: TokenKind::Assign,
+				span: TokenSpan { start: 6, end: 7 }
+			}
+		);
+
+		assert_eq!(
+			vec[3],
+			Token {
+				kind: TokenKind::Literal(LiteralKind::Float),
+				span: TokenSpan { start: 8, end: 11 },
+			}
+		);
+
+		assert_eq!(
+			vec[4],
+			Token {
+				kind: TokenKind::Semicolon,
+				span: TokenSpan { start: 11, end: 12 }
+			}
+		);
+	}
 }
