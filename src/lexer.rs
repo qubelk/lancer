@@ -230,7 +230,6 @@ mod tests {
 		);
 	}
 
-	// TODO: Create LexerError for this case.
 	#[test]
 	fn lexer_lex_float_without_end() {
 		let mut l = Lexer::new("0.");
