@@ -1,4 +1,5 @@
 use crate::lexer::token::Token;
+use crate::lexer::token::TokenKind;
 
 pub struct ParserCursor {
 	tokens: Vec<Token>,
@@ -6,7 +7,7 @@ pub struct ParserCursor {
 }
 
 impl ParserCursor {
-	fn new(tokens: Vec<Token>) -> Self {
+	pub fn new(tokens: Vec<Token>) -> Self {
 		Self { tokens, pos: 0 }
 	}
 
@@ -14,8 +15,12 @@ impl ParserCursor {
 		self.pos
 	}
 
-	pub fn peek(&mut self) -> Option<&Token> {
+	pub fn peek(&self) -> Option<&Token> {
 		self.tokens.get(self.pos)
+	}
+
+	pub fn peek_kind(&self) -> Option<&TokenKind> {
+		Some(&self.peek()?.kind)
 	}
 
 	pub fn next(&mut self) -> Option<Token> {
@@ -24,21 +29,35 @@ impl ParserCursor {
 		t
 	}
 
-	pub fn expect(&mut self, expected: &Token) -> Result<(), ParseError> {
-		if self.peek() == Some(expected) {
+	pub fn next_kind(&mut self) -> Option<TokenKind> {
+		let k = self.peek_kind().cloned();
+		self.pos += 1;
+		k
+	}
+
+	pub fn expect(&mut self, kind: &TokenKind, expected: Expected) -> Result<(), ParseError> {
+		if self.peek_kind() == Some(kind) {
 			self.pos += 1;
 			Ok(())
 		} else {
-			Err(ParseError::Unexpected(
-				self.peek().cloned(),
-				*expected,
-				self.pos,
-			))
+			Err(ParseError::Unexpected(self.peek_kind().cloned(), expected))
 		}
+	}
+
+	pub fn at_eof(&self) -> bool {
+		matches!(self.peek_kind(), Some(TokenKind::Eof) | None)
 	}
 }
 
+#[derive(Debug)]
+pub enum Expected {
+	Expr,
+	Kind(TokenKind),
+	Literal,
+}
+
+#[derive(Debug)]
 pub enum ParseError {
-	// Obtained, Expected, Position
-	Unexpected(Option<Token>, Token, usize),
+	Unexpected(Option<TokenKind>, Expected),
+	ExpectedIdent,
 }

@@ -26,4 +26,8 @@ impl<'a> LexerCursor<'a> {
 	pub fn pos(&self) -> usize {
 		self.pos
 	}
+
+	pub fn slice(&self, start: usize, end: usize) -> String {
+		self.input[start..end].to_string()
+	}
 }
