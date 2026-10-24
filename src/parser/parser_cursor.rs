@@ -11,10 +11,6 @@ impl ParserCursor {
 		Self { tokens, pos: 0 }
 	}
 
-	pub fn pos(&self) -> usize {
-		self.pos
-	}
-
 	pub fn peek(&self) -> Option<&Token> {
 		self.tokens.get(self.pos)
 	}
@@ -23,16 +19,14 @@ impl ParserCursor {
 		Some(&self.peek()?.kind)
 	}
 
+	pub fn peekn_kind(&self, n: usize) -> Option<&TokenKind> {
+		Some(&self.tokens[self.pos..].get(n)?.kind)
+	}
+
 	pub fn next(&mut self) -> Option<Token> {
 		let t = self.peek().cloned();
 		self.pos += 1;
 		t
-	}
-
-	pub fn next_kind(&mut self) -> Option<TokenKind> {
-		let k = self.peek_kind().cloned();
-		self.pos += 1;
-		k
 	}
 
 	pub fn expect(&mut self, kind: &TokenKind, expected: Expected) -> Result<(), ParseError> {
