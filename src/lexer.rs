@@ -21,7 +21,7 @@ impl<'a> Lexer<'a> {
 
 	fn skip_whitespaces(&mut self) {
 		while let Some(ch) = self.cursor.peek() {
-			if char::is_whitespace(*ch) {
+			if char::is_whitespace(ch) {
 				self.cursor.next();
 			} else {
 				break;
@@ -30,20 +30,10 @@ impl<'a> Lexer<'a> {
 	}
 
 	fn skip_comments(&mut self) {
-		loop {
-			if self.cursor.peek() != Some(&'/') {
-				break;
-			}
-
-			let mut look = self.cursor.clone();
-			if look.next() != Some('/') {
-				break;
-			}
-
+		while self.cursor.peek() == Some('/') && self.cursor.peekn(1) == Some('/') {
 			self.cursor.next();
 			self.cursor.next();
-
-			while let Some(&ch) = self.cursor.peek() {
+			while let Some(ch) = self.cursor.peek() {
 				if ch == '\n' {
 					break;
 				}
@@ -55,7 +45,7 @@ impl<'a> Lexer<'a> {
 
 	fn lex_number(&mut self) -> Result<Token, LexerError> {
 		let start = self.cursor.pos();
-		while let Some(&ch) = self.cursor.peek() {
+		while let Some(ch) = self.cursor.peek() {
 			if ch.is_ascii_digit() {
 				self.cursor.next();
 			} else {
@@ -65,13 +55,13 @@ impl<'a> Lexer<'a> {
 
 		let mut kind = LiteralKind::Int;
 
-		if self.cursor.peek() == Some(&'.') {
+		if self.cursor.peek() == Some('.') {
 			let mut look = self.cursor.clone();
 			look.next();
 			if look.peek().is_some_and(|ch| ch.is_ascii_digit()) {
 				kind = LiteralKind::Float;
 				self.cursor.next();
-				while let Some(&ch) = self.cursor.peek() {
+				while let Some(ch) = self.cursor.peek() {
 					if ch.is_ascii_digit() {
 						self.cursor.next();
 					} else if ch == '.' {
@@ -91,25 +81,31 @@ impl<'a> Lexer<'a> {
 		})
 	}
 
-	fn match_keyword(&mut self, ident: &str, span: TokenSpan) -> Result<Token, LexerError> {
-		match ident {
-			"var" => Ok(Token {
-				kind: TokenKind::KeywordVar,
-				span,
-			}),
-			"" => Err(LexerError::UnexpectedChar),
-			_ => Ok(Token {
-				kind: TokenKind::Ident,
-				span,
-			}),
-		}
+	fn match_keyword(ident: &str, span: TokenSpan) -> Result<Token, LexerError> {
+		let kind = match ident {
+			"var" => TokenKind::KeywordVar,
+			_ => TokenKind::Ident,
+		};
+
+		Ok(Token { kind, span })
 	}
 
 	fn lex_ident(&mut self) -> Result<Token, LexerError> {
 		let start = self.cursor.pos();
+
+		let first = match self.cursor.peek() {
+			Some(ch) if ch.is_ascii_alphabetic() || ch == '_' => ch,
+			Some(ch) => {
+				let start = self.cursor.pos();
+				self.cursor.next();
+				return Err(LexerError::UnexpectedChar);
+			}
+			None => return Err(LexerError::UnexpectedChar),
+		};
+
 		let mut val = String::new();
 
-		while let Some(&ch) = self.cursor.peek() {
+		while let Some(ch) = self.cursor.peek() {
 			if ch.is_alphanumeric() || ch == '_' {
 				val.push(ch);
 				self.cursor.next();
@@ -118,7 +114,7 @@ impl<'a> Lexer<'a> {
 			}
 		}
 
-		self.match_keyword(
+		Self::match_keyword(
 			&val,
 			TokenSpan {
 				start,
@@ -152,7 +148,7 @@ impl<'a> Iterator for Lexer<'a> {
 				self.cursor.next();
 				TokenKind::Semicolon
 			}
-			c if *c == '_' || c.is_alphanumeric() => return Some(self.lex_ident()),
+			c if c == '_' || c.is_alphanumeric() => return Some(self.lex_ident()),
 			_ => {
 				self.cursor.next();
 				return Some(Err(LexerError::UnexpectedChar));
@@ -184,7 +180,7 @@ mod tests {
 	fn lexer_skip_whitespace() {
 		let mut l = Lexer::new("     l");
 		l.skip_whitespaces();
-		assert_eq!(l.cursor.peek(), Some(&'l'));
+		assert_eq!(l.cursor.peek(), Some('l'));
 		assert_eq!(l.cursor.pos(), 5);
 	}
 
@@ -192,7 +188,7 @@ mod tests {
 	fn lexer_skip_comments() {
 		let mut l = Lexer::new("// \n");
 		l.skip_comments();
-		assert_eq!(l.cursor.peek(), Some(&'\n'));
+		assert_eq!(l.cursor.peek(), Some('\n'));
 		assert_eq!(l.cursor.pos(), 3);
 	}
 

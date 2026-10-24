@@ -1,28 +1,26 @@
-use std::iter::Peekable;
-use std::str::Chars;
-
 #[derive(Clone)]
 pub struct Cursor<'a> {
-	chars: Peekable<Chars<'a>>,
+	input: &'a str,
 	pos: usize,
 }
 
 impl<'a> Cursor<'a> {
 	pub fn new(input: &'a str) -> Self {
-		Self {
-			chars: input.chars().peekable(),
-			pos: 0,
-		}
+		Self { input, pos: 0 }
 	}
 
 	pub fn next(&mut self) -> Option<char> {
-		let ch = self.chars.next()?;
+		let ch = self.peek()?;
 		self.pos += ch.len_utf8();
 		Some(ch)
 	}
 
-	pub fn peek(&mut self) -> Option<&char> {
-		self.chars.peek()
+	pub fn peek(&self) -> Option<char> {
+		self.input[self.pos..].chars().next()
+	}
+
+	pub fn peekn(&self, n: usize) -> Option<char> {
+		self.input[self.pos..].chars().nth(n)
 	}
 
 	pub fn pos(&self) -> usize {
