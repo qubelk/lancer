@@ -56,22 +56,40 @@ impl<'a> Lexer<'a> {
 		let mut kind = LiteralKind::Int;
 
 		if self.cursor.peek() == Some('.') {
-			let mut look = self.cursor.clone();
-			look.next();
-			if look.peek().is_some_and(|ch| ch.is_ascii_digit()) {
+			self.cursor.next();
+			if self.cursor.peek().is_some_and(|ch| ch.is_ascii_digit()) {
 				kind = LiteralKind::Float;
 				self.cursor.next();
 				while let Some(ch) = self.cursor.peek() {
 					if ch.is_ascii_digit() {
 						self.cursor.next();
 					} else if ch == '.' {
-						return Err(LexerError::UnexpectedChar);
+						let start = self.cursor.pos();
+						self.cursor.next();
+						return Err(LexerError::UnexpectedChar(
+							ch,
+							TokenSpan {
+								start,
+								end: self.cursor.pos(),
+							},
+						));
+					} else {
+						break;
 					}
 				}
 			} else {
-				return Err(LexerError::UnexpectedChar);
+				let start = self.cursor.pos();
+				self.cursor.next();
+				return Err(LexerError::UnexpectedChar(
+					self.cursor.peek().unwrap_or('\0'),
+					TokenSpan {
+						start,
+						end: self.cursor.pos(),
+					},
+				));
 			}
 		}
+
 		Ok(Token {
 			kind: TokenKind::Literal(kind),
 			span: TokenSpan {
@@ -98,12 +116,28 @@ impl<'a> Lexer<'a> {
 			Some(ch) => {
 				let start = self.cursor.pos();
 				self.cursor.next();
-				return Err(LexerError::UnexpectedChar);
+				return Err(LexerError::UnexpectedChar(
+					ch,
+					TokenSpan {
+						start,
+						end: self.cursor.pos(),
+					},
+				));
 			}
-			None => return Err(LexerError::UnexpectedChar),
+			None => {
+				return Err(LexerError::UnexpectedChar(
+					'\0',
+					TokenSpan {
+						start,
+						end: self.cursor.pos(),
+					},
+				));
+			}
 		};
 
 		let mut val = String::new();
+		val.push(first);
+		self.cursor.next();
 
 		while let Some(ch) = self.cursor.peek() {
 			if ch.is_alphanumeric() || ch == '_' {
@@ -148,10 +182,16 @@ impl<'a> Iterator for Lexer<'a> {
 				self.cursor.next();
 				TokenKind::Semicolon
 			}
-			c if c == '_' || c.is_alphanumeric() => return Some(self.lex_ident()),
-			_ => {
+			ch if ch == '_' || ch.is_alphanumeric() => return Some(self.lex_ident()),
+			ch => {
 				self.cursor.next();
-				return Some(Err(LexerError::UnexpectedChar));
+				return Some(Err(LexerError::UnexpectedChar(
+					ch,
+					TokenSpan {
+						start,
+						end: self.cursor.pos(),
+					},
+				)));
 			}
 		};
 
@@ -167,7 +207,7 @@ impl<'a> Iterator for Lexer<'a> {
 
 #[derive(Debug, PartialEq)]
 pub enum LexerError {
-	UnexpectedChar,
+	UnexpectedChar(char, TokenSpan),
 }
 
 #[cfg(test)]
@@ -227,13 +267,25 @@ mod tests {
 	#[test]
 	fn lexer_lex_float_without_end() {
 		let mut l = Lexer::new("0.");
-		assert_eq!(l.lex_number(), Err(LexerError::UnexpectedChar));
+		assert_eq!(
+			l.lex_number(),
+			Err(LexerError::UnexpectedChar(
+				'.',
+				TokenSpan { start: 0, end: 1 }
+			))
+		);
 	}
 
 	#[test]
 	fn lexer_lex_float_with_multiple_dots() {
 		let mut l = Lexer::new("1.2.3");
-		assert_eq!(l.lex_number(), Err(LexerError::UnexpectedChar));
+		assert_eq!(
+			l.lex_number(),
+			Err(LexerError::UnexpectedChar(
+				'.',
+				TokenSpan { start: 3, end: 4 }
+			))
+		);
 	}
 
 	#[test]
@@ -275,7 +327,10 @@ mod tests {
 	#[test]
 	fn lexer_lex_ident_identifier_invalid() {
 		let mut l = Lexer::new("#invalid$");
-		assert_eq!(l.lex_ident().unwrap_err(), LexerError::UnexpectedChar);
+		assert_eq!(
+			l.lex_ident().unwrap_err(),
+			LexerError::UnexpectedChar('#', TokenSpan { start: 0, end: 1 })
+		);
 	}
 
 	#[test]
