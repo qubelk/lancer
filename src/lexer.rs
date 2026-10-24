@@ -236,6 +236,17 @@ impl<'a> Iterator for Lexer<'a> {
 	}
 }
 
+impl<'a> Lexer<'a> {
+	pub fn tokenize(&mut self) -> Result<Vec<Token>, LexerError> {
+		let mut tokens: Vec<Token> = vec![];
+		for token in self {
+			tokens.push(token?);
+		}
+
+		Ok(tokens)
+	}
+}
+
 #[derive(Debug, PartialEq)]
 pub enum LexerError {
 	UnexpectedChar(char, TokenSpan),
