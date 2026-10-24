@@ -20,9 +20,11 @@ fn main() {
 			panic!("Failed to read {}: {}", path.display(), e);
 		}
 
-		let lexer = lexer::Lexer::new(&data);
-		for token in lexer {
-			let _ = dbg!(token);
-		}
+		let mut lexer = lexer::Lexer::new(&data);
+		let tokens = lexer.tokenize().unwrap();
+		let _ = dbg!(&tokens);
+
+		let mut parser = parser::Parser::new(tokens);
+		let _ = dbg!(parser.parse());
 	}
 }
