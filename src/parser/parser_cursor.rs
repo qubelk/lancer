@@ -29,6 +29,12 @@ impl ParserCursor {
 		t
 	}
 
+	pub fn next_kind(&mut self) -> Option<TokenKind> {
+		let k = self.peek_kind().cloned();
+		self.pos += 1;
+		k
+	}
+
 	pub fn expect(&mut self, kind: &TokenKind, expected: Expected) -> Result<(), ParseError> {
 		if self.peek_kind() == Some(kind) {
 			self.pos += 1;
@@ -37,13 +43,20 @@ impl ParserCursor {
 			Err(ParseError::Unexpected(self.peek_kind().cloned(), expected))
 		}
 	}
+
+	pub fn at_eof(&self) -> bool {
+		matches!(self.peek_kind(), Some(TokenKind::Eof) | None)
+	}
 }
 
+#[derive(Debug)]
 pub enum Expected {
+	Expr,
 	Kind(TokenKind),
 	Literal,
 }
 
+#[derive(Debug)]
 pub enum ParseError {
 	Unexpected(Option<TokenKind>, Expected),
 	ExpectedIdent,

@@ -22,15 +22,21 @@ impl Parser {
 		}
 	}
 
-	pub fn parse() -> Result<Vec<Stmt>, ParseError> {
-		todo!();
+	pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
+		let mut stmts: Vec<Stmt> = vec![];
+		while self.cursor.at_eof() != true {
+			stmts.push(dbg!(self.parse_stmt()?));
+		}
+
+		Ok(stmts)
 	}
 
 	fn parse_expr(&mut self) -> Result<Expr, ParseError> {
+		dbg!(self.cursor.peek());
 		match self.cursor.peek_kind() {
 			Some(TokenKind::Literal(_)) => self.parse_literal(),
 			Some(TokenKind::Ident) => self.parse_ident(),
-			_ => todo!(),
+			other => Err(ParseError::Unexpected(other.cloned(), Expected::Expr)),
 		}
 	}
 
@@ -77,8 +83,18 @@ impl Parser {
 		Ok(Expr::Ident(self.expect_ident()?))
 	}
 
-	fn parse_stmt() -> Result<Stmt, ParseError> {
-		todo!()
+	fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
+		match self.cursor.peek_kind() {
+			Some(TokenKind::KeywordVar) => self.parse_var(),
+			_ => {
+				let expr = self.parse_expr()?;
+				self.cursor.expect(
+					&TokenKind::Semicolon,
+					Expected::Kind(TokenKind::Semicolon),
+				)?;
+				Ok(Stmt::Expr(expr))
+			}
+		}
 	}
 
 	fn parse_var(&mut self) -> Result<Stmt, ParseError> {
@@ -88,15 +104,87 @@ impl Parser {
 		)?;
 		let ident = self.expect_ident()?;
 
-		self.cursor
-			.expect(&TokenKind::Assign, Expected::Kind(TokenKind::Assign))?;
-		let value = self.parse_expr()?;
-		self.cursor
-			.expect(&TokenKind::Semicolon, Expected::Kind(TokenKind::Assign))?;
+		match self.cursor.peek_kind() {
+			Some(TokenKind::Semicolon) => {
+				self.cursor.next();
+				Ok(Stmt::Var { ident, value: None })
+			}
+			Some(TokenKind::Assign) => {
+				self.cursor.next();
 
-		Ok(Stmt::Var {
-			ident: ident,
-			value,
-		})
+				let value = self.parse_expr()?;
+				self.cursor.expect(
+					&TokenKind::Semicolon,
+					Expected::Kind(TokenKind::Semicolon),
+				)?;
+
+				Ok(Stmt::Var {
+					ident,
+					value: Some(value),
+				})
+			}
+			other => Err(ParseError::Unexpected(
+				other.cloned(),
+				Expected::Kind(TokenKind::Semicolon),
+			)),
+		}
+	}
+}
+
+#[cfg(test)]
+mod tests {
+	use super::*;
+	use crate::lexer::Lexer;
+
+	fn parse_from_string(source: &str) -> Vec<Stmt> {
+		let tokens: Vec<Token> = Lexer::new(source)
+			.map(|r| r.expect("lexer error"))
+			.collect();
+
+		let mut p = Parser::new(tokens);
+		p.parse().expect("parse error")
+	}
+
+	#[test]
+	fn parse_var_empty_declaration() {
+		let ast = parse_from_string("var x;");
+		assert!(matches!(&ast[0], Stmt::Var { ident, .. } if ident == "x"))
+	}
+
+	#[test]
+	fn parse_var_declaration() {
+		let ast = parse_from_string("var x = 5;");
+		assert!(
+			matches!(&ast[0], Stmt::Var { ident, value } if ident == "x" &&
+				*value == Some(Expr::Literal(AstLiteralKind::Int(5))))
+		)
+	}
+
+	#[test]
+	fn parse_float_var_declaration() {
+		let ast = parse_from_string("var x = 5.5;");
+		assert!(
+			matches!(&ast[0], Stmt::Var { ident, value } if ident == "x" &&
+				*value == Some(Expr::Literal(AstLiteralKind::Float(5.5))))
+		)
+	}
+
+	#[test]
+	fn parse_multiple_var_declaration() {
+		let ast = parse_from_string("var x = 5; var y = 6; var z = 7;");
+		assert_eq!(ast.len(), 3);
+	}
+
+	#[test]
+	fn parse_var_stmt() {
+		let ast = parse_from_string("var x = 5; x;");
+		assert_eq!(ast.len(), 2);
+		assert!(matches!(&ast[1], Stmt::Expr(Expr::Ident(ident)) if ident == "x"));
+	}
+
+	#[test]
+	fn parse_empty_string() {
+		let ast = parse_from_string("");
+		assert!(ast.is_empty())
 	}
 }
