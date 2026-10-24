@@ -1,6 +1,8 @@
 mod cursor;
 mod token;
 
+use std::collections::HashMap;
+
 use cursor::Cursor;
 
 use token::LiteralKind;
@@ -87,16 +89,17 @@ impl<'a> Lexer<'a> {
 		})
 	}
 
-	fn match_keyword(&self, ident: &str, span: TokenSpan) -> Token {
+	fn match_keyword(&mut self, ident: &str, span: TokenSpan) -> Result<Token, LexerError> {
 		match ident {
-			"var" => Token {
+			"var" => Ok(Token {
 				kind: TokenKind::KeywordVar,
 				span,
-			},
-			_ => Token {
+			}),
+			"" => Err(LexerError::UnexpectedChar),
+			_ => Ok(Token {
 				kind: TokenKind::Ident,
 				span,
-			},
+			}),
 		}
 	}
 
@@ -113,13 +116,15 @@ impl<'a> Lexer<'a> {
 			}
 		}
 
-		Ok(self.match_keyword(
+		dbg!(&val);
+
+		self.match_keyword(
 			&val,
 			TokenSpan {
 				start,
 				end: self.cursor.pos(),
 			},
-		))
+		)
 	}
 }
 
@@ -150,7 +155,7 @@ impl<'a> Iterator for Lexer<'a> {
 			c if *c == '_' || c.is_alphanumeric() => return Some(self.lex_ident()),
 			_ => {
 				self.cursor.next();
-				return Some(Err(LexerError::UnexpectedChar {}));
+				return Some(Err(LexerError::UnexpectedChar));
 			}
 		};
 
@@ -272,17 +277,10 @@ mod tests {
 		)
 	}
 
-	// TODO: Fix lex_ident parsing.
 	#[test]
 	fn lexer_lex_ident_identifier_invalid() {
 		let mut l = Lexer::new("#invalid$");
-		assert_eq!(
-			l.lex_ident().unwrap(),
-			Token {
-				kind: TokenKind::Ident,
-				span: TokenSpan { start: 0, end: 0 }
-			}
-		);
+		assert_eq!(l.lex_ident().unwrap_err(), LexerError::UnexpectedChar);
 	}
 
 	#[test]
