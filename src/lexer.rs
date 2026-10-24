@@ -56,37 +56,40 @@ impl<'a> Lexer<'a> {
 		let mut kind = LiteralKind::Int;
 
 		if self.cursor.peek() == Some('.') {
+			let dot_position = self.cursor.pos();
 			self.cursor.next();
-			if self.cursor.peek().is_some_and(|ch| ch.is_ascii_digit()) {
-				kind = LiteralKind::Float;
-				self.cursor.next();
-				while let Some(ch) = self.cursor.peek() {
-					if ch.is_ascii_digit() {
-						self.cursor.next();
-					} else if ch == '.' {
-						let start = self.cursor.pos();
-						self.cursor.next();
-						return Err(LexerError::UnexpectedChar(
-							ch,
-							TokenSpan {
-								start,
-								end: self.cursor.pos(),
-							},
-						));
-					} else {
-						break;
+
+			match self.cursor.peek() {
+				Some(ch) if ch.is_ascii_digit() => {
+					kind = LiteralKind::Float;
+					self.cursor.next();
+					while let Some(ch) = self.cursor.peek() {
+						if ch.is_ascii_digit() {
+							self.cursor.next();
+						} else if ch == '.' {
+							let start = self.cursor.pos();
+							self.cursor.next();
+							return Err(LexerError::UnexpectedChar(
+								ch,
+								TokenSpan {
+									start,
+									end: self.cursor.pos(),
+								},
+							));
+						} else {
+							break;
+						}
 					}
 				}
-			} else {
-				let start = self.cursor.pos();
-				self.cursor.next();
-				return Err(LexerError::UnexpectedChar(
-					self.cursor.peek().unwrap_or('\0'),
-					TokenSpan {
-						start,
-						end: self.cursor.pos(),
-					},
-				));
+				_ => {
+					return Err(LexerError::UnexpectedChar(
+						'.',
+						TokenSpan {
+							start: dot_position,
+							end: dot_position + 1,
+						},
+					));
+				}
 			}
 		}
 
@@ -273,7 +276,7 @@ mod tests {
 			l.lex_number(),
 			Err(LexerError::UnexpectedChar(
 				'.',
-				TokenSpan { start: 0, end: 1 }
+				TokenSpan { start: 1, end: 2 }
 			))
 		);
 	}
