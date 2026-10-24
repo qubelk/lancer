@@ -37,14 +37,13 @@ impl ParserCursor {
 			Err(ParseError::Unexpected(
 				self.peek_kind().cloned(),
 				expected.clone(),
-				self.pos,
 			))
 		}
 	}
 }
 
 pub enum ParseError {
-	// Obtained, Expected, Position
-	Unexpected(Option<TokenKind>, TokenKind, usize),
+	// Obtained, Expected
+	Unexpected(Option<TokenKind>, TokenKind),
 	ExpectedIdent,
 }

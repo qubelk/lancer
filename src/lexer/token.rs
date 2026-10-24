@@ -7,6 +7,8 @@ pub struct Token {
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum LiteralKind {
+	// This need for error handling
+	Any,
 	Int,
 	Float,
 }
