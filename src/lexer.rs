@@ -1,8 +1,6 @@
 mod cursor;
 mod token;
 
-use std::collections::HashMap;
-
 use cursor::Cursor;
 
 use token::LiteralKind;
@@ -119,8 +117,6 @@ impl<'a> Lexer<'a> {
 				break;
 			}
 		}
-
-		dbg!(&val);
 
 		self.match_keyword(
 			&val,
