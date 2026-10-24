@@ -5,6 +5,7 @@ use parser_cursor::ParseError;
 use parser_cursor::ParserCursor;
 
 use crate::ast::AstLiteralKind;
+use crate::ast::BinaryOp;
 use crate::ast::Expr;
 use crate::ast::Stmt;
 use crate::lexer::token::Token;
@@ -24,7 +25,7 @@ impl Parser {
 
 	pub fn parse(&mut self) -> Result<Vec<Stmt>, ParseError> {
 		let mut stmts: Vec<Stmt> = vec![];
-		while self.cursor.at_eof() != true {
+		while !self.cursor.at_eof() {
 			stmts.push(dbg!(self.parse_stmt()?));
 		}
 
@@ -83,9 +84,34 @@ impl Parser {
 		Ok(Expr::Ident(self.expect_ident()?))
 	}
 
+	fn parse_assign(&mut self) -> Result<Stmt, ParseError> {
+		let left = self.parse_ident()?;
+		self.cursor
+			.expect(&TokenKind::Assign, Expected::Kind(TokenKind::Assign))?;
+
+		let right = self.parse_literal()?;
+
+		Ok(Stmt::Expr(Expr::Binary {
+			op: BinaryOp::Assign,
+			left: Box::new(left),
+			right: Box::new(right),
+		}))
+	}
+
 	fn parse_stmt(&mut self) -> Result<Stmt, ParseError> {
 		match self.cursor.peek_kind() {
 			Some(TokenKind::KeywordVar) => self.parse_var(),
+			Some(TokenKind::Ident)
+				if matches!(self.cursor.peekn_kind(1), Some(TokenKind::Assign)) =>
+			{
+				let stmt = self.parse_assign()?;
+				self.cursor.expect(
+					&TokenKind::Semicolon,
+					Expected::Kind(TokenKind::Semicolon),
+				)?;
+
+				Ok(stmt)
+			}
 			_ => {
 				let expr = self.parse_expr()?;
 				self.cursor.expect(
@@ -104,30 +130,24 @@ impl Parser {
 		)?;
 		let ident = self.expect_ident()?;
 
-		match self.cursor.peek_kind() {
-			Some(TokenKind::Semicolon) => {
-				self.cursor.next();
-				Ok(Stmt::Var { ident, value: None })
-			}
+		let value = match self.cursor.peek_kind() {
+			Some(TokenKind::Semicolon) => None,
 			Some(TokenKind::Assign) => {
 				self.cursor.next();
 
-				let value = self.parse_expr()?;
-				self.cursor.expect(
-					&TokenKind::Semicolon,
-					Expected::Kind(TokenKind::Semicolon),
-				)?;
-
-				Ok(Stmt::Var {
-					ident,
-					value: Some(value),
-				})
+				Some(self.parse_expr()?)
 			}
-			other => Err(ParseError::Unexpected(
-				other.cloned(),
-				Expected::Kind(TokenKind::Semicolon),
-			)),
-		}
+			other => {
+				return Err(ParseError::Unexpected(
+					other.cloned(),
+					Expected::Kind(TokenKind::Semicolon),
+				));
+			}
+		};
+
+		self.cursor
+			.expect(&TokenKind::Semicolon, Expected::Kind(TokenKind::Semicolon))?;
+		Ok(Stmt::Var { ident, value })
 	}
 }
 
@@ -186,5 +206,16 @@ mod tests {
 	fn parse_empty_string() {
 		let ast = parse_from_string("");
 		assert!(ast.is_empty())
+	}
+
+	#[test]
+	fn parse_assign() {
+		let ast = parse_from_string("var x = 5; x = 3;");
+		assert!(matches!(
+			&ast[1],
+			Stmt::Expr(Expr::Binary { op, left, right }) if *op == BinaryOp::Assign &&
+			**left == Expr::Ident("x".to_string()) &&
+			**right == Expr::Literal(AstLiteralKind::Int(3))
+		))
 	}
 }
