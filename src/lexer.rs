@@ -163,12 +163,8 @@ impl<'a> Lexer<'a> {
 			},
 		)
 	}
-}
 
-impl<'a> Iterator for Lexer<'a> {
-	type Item = Result<Token, LexerError>;
-
-	fn next(&mut self) -> Option<Self::Item> {
+	fn skip_trivia(&mut self) {
 		loop {
 			let pos = self.cursor.pos();
 			self.skip_whitespaces();
@@ -177,6 +173,14 @@ impl<'a> Iterator for Lexer<'a> {
 				break;
 			}
 		}
+	}
+}
+
+impl<'a> Iterator for Lexer<'a> {
+	type Item = Result<Token, LexerError>;
+
+	fn next(&mut self) -> Option<Self::Item> {
+		self.skip_trivia();
 
 		let start = self.cursor.pos();
 		let kind = match self.cursor.peek()? {
@@ -247,6 +251,22 @@ mod tests {
 		l.skip_comments();
 		assert_eq!(l.cursor.peek(), None);
 		assert_eq!(l.cursor.pos(), 4);
+	}
+
+	#[test]
+	fn lexer_skip_trivia() {
+		let mut l = Lexer::new("  //   ");
+		l.skip_trivia();
+		assert_eq!(l.cursor.peek(), None);
+		assert_eq!(l.cursor.pos(), 7);
+	}
+
+	#[test]
+	fn lexer_skip_trivia_without_trivia() {
+		let mut l = Lexer::new("");
+		l.skip_trivia();
+		assert_eq!(l.cursor.peek(), None);
+		assert_eq!(l.cursor.pos(), 0);
 	}
 
 	#[test]
