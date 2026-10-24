@@ -21,7 +21,7 @@ impl<'a> Lexer<'a> {
 
 	fn skip_whitespaces(&mut self) {
 		while let Some(ch) = self.cursor.peek() {
-			if char::is_whitespace(ch) {
+			if ch.is_ascii_whitespace() {
 				self.cursor.next();
 			} else {
 				break;
@@ -43,6 +43,44 @@ impl<'a> Lexer<'a> {
 		}
 	}
 
+	fn lex_float(&mut self) -> Result<LiteralKind, LexerError> {
+		let dot_position = self.cursor.pos();
+		self.cursor.next();
+
+		match self.cursor.peek() {
+			Some(ch) if ch.is_ascii_digit() => {
+				let kind = LiteralKind::Float;
+				self.cursor.next();
+				while let Some(ch) = self.cursor.peek() {
+					if ch.is_ascii_digit() {
+						self.cursor.next();
+					} else if ch == '.' {
+						let start = self.cursor.pos();
+						self.cursor.next();
+						return Err(LexerError::UnexpectedChar(
+							ch,
+							TokenSpan {
+								start,
+								end: self.cursor.pos(),
+							},
+						));
+					} else {
+						break;
+					}
+				}
+
+				Ok(kind)
+			}
+			_ => Err(LexerError::UnexpectedChar(
+				'.',
+				TokenSpan {
+					start: dot_position,
+					end: dot_position + 1,
+				},
+			)),
+		}
+	}
+
 	fn lex_number(&mut self) -> Result<Token, LexerError> {
 		let start = self.cursor.pos();
 		while let Some(ch) = self.cursor.peek() {
@@ -56,41 +94,7 @@ impl<'a> Lexer<'a> {
 		let mut kind = LiteralKind::Int;
 
 		if self.cursor.peek() == Some('.') {
-			let dot_position = self.cursor.pos();
-			self.cursor.next();
-
-			match self.cursor.peek() {
-				Some(ch) if ch.is_ascii_digit() => {
-					kind = LiteralKind::Float;
-					self.cursor.next();
-					while let Some(ch) = self.cursor.peek() {
-						if ch.is_ascii_digit() {
-							self.cursor.next();
-						} else if ch == '.' {
-							let start = self.cursor.pos();
-							self.cursor.next();
-							return Err(LexerError::UnexpectedChar(
-								ch,
-								TokenSpan {
-									start,
-									end: self.cursor.pos(),
-								},
-							));
-						} else {
-							break;
-						}
-					}
-				}
-				_ => {
-					return Err(LexerError::UnexpectedChar(
-						'.',
-						TokenSpan {
-							start: dot_position,
-							end: dot_position + 1,
-						},
-					));
-				}
-			}
+			kind = self.lex_float()?;
 		}
 
 		Ok(Token {
