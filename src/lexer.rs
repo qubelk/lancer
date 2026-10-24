@@ -10,12 +10,14 @@ use token::TokenSpan;
 
 pub struct Lexer<'a> {
 	cursor: Cursor<'a>,
+	eof_emitted: bool,
 }
 
 impl<'a> Lexer<'a> {
 	pub fn new(input: &'a str) -> Self {
 		Self {
 			cursor: Cursor::new(input),
+			eof_emitted: false,
 		}
 	}
 
@@ -182,29 +184,39 @@ impl<'a> Iterator for Lexer<'a> {
 	fn next(&mut self) -> Option<Self::Item> {
 		self.skip_trivia();
 
+		if self.eof_emitted {
+			return None;
+		}
+
 		let start = self.cursor.pos();
-		let kind = match self.cursor.peek()? {
-			'0'..='9' => return Some(self.lex_number()),
-			'=' => {
-				self.cursor.next();
-				TokenKind::Assign
-			}
-			';' => {
-				self.cursor.next();
-				TokenKind::Semicolon
-			}
-			ch if ch == '_' || ch.is_ascii_alphanumeric() => {
-				return Some(self.lex_ident());
-			}
-			ch => {
-				self.cursor.next();
-				return Some(Err(LexerError::UnexpectedChar(
-					ch,
-					TokenSpan {
-						start,
-						end: self.cursor.pos(),
-					},
-				)));
+		let kind = match self.cursor.peek() {
+			Some(ch) => match ch {
+				'0'..='9' => return Some(self.lex_number()),
+				'=' => {
+					self.cursor.next();
+					TokenKind::Assign
+				}
+				';' => {
+					self.cursor.next();
+					TokenKind::Semicolon
+				}
+				ch if ch == '_' || ch.is_ascii_alphanumeric() => {
+					return Some(self.lex_ident());
+				}
+				ch => {
+					self.cursor.next();
+					return Some(Err(LexerError::UnexpectedChar(
+						ch,
+						TokenSpan {
+							start,
+							end: self.cursor.pos(),
+						},
+					)));
+				}
+			},
+			None => {
+				self.eof_emitted = true;
+				TokenKind::Eof
 			}
 		};
 
@@ -436,6 +448,14 @@ mod tests {
 				span: TokenSpan { start: 9, end: 10 }
 			}
 		);
+
+		assert_eq!(
+			vec[5],
+			Token {
+				kind: TokenKind::Eof,
+				span: TokenSpan { start: 10, end: 10 }
+			}
+		)
 	}
 
 	#[test]
@@ -485,6 +505,14 @@ mod tests {
 				span: TokenSpan { start: 11, end: 12 }
 			}
 		);
+
+		assert_eq!(
+			vec[5],
+			Token {
+				kind: TokenKind::Eof,
+				span: TokenSpan { start: 12, end: 12 }
+			}
+		)
 	}
 
 	#[test]
@@ -534,5 +562,13 @@ mod tests {
 				span: TokenSpan { start: 9, end: 10 }
 			})
 		);
+
+		assert_eq!(
+			vec[5],
+			Ok(Token {
+				kind: TokenKind::Eof,
+				span: TokenSpan { start: 10, end: 10 }
+			})
+		)
 	}
 }
