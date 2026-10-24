@@ -105,6 +105,7 @@ impl<'a> Lexer<'a> {
 				start,
 				end: self.cursor.pos(),
 			},
+			orig: self.cursor.slice(start, self.cursor.pos()),
 		})
 	}
 
@@ -114,7 +115,11 @@ impl<'a> Lexer<'a> {
 			_ => TokenKind::Ident,
 		};
 
-		Token { kind, span }
+		Token {
+			kind,
+			span,
+			orig: ident.to_string(),
+		}
 	}
 
 	fn lex_ident(&mut self) -> Result<Token, LexerError> {
@@ -226,6 +231,7 @@ impl<'a> Iterator for Lexer<'a> {
 				start,
 				end: self.cursor.pos(),
 			},
+			orig: self.cursor.slice(start, self.cursor.pos()),
 		}))
 	}
 }
@@ -288,7 +294,8 @@ mod tests {
 			l.lex_number().unwrap(),
 			Token {
 				kind: TokenKind::Literal(LiteralKind::Int),
-				span: TokenSpan { start: 0, end: 2 }
+				span: TokenSpan { start: 0, end: 2 },
+				orig: "69".to_string(),
 			}
 		);
 	}
@@ -300,7 +307,8 @@ mod tests {
 			l.lex_number().unwrap(),
 			Token {
 				kind: TokenKind::Literal(LiteralKind::Float),
-				span: TokenSpan { start: 0, end: 4 }
+				span: TokenSpan { start: 0, end: 4 },
+				orig: "69.9".to_string(),
 			}
 		);
 	}
@@ -312,7 +320,7 @@ mod tests {
 			l.lex_number(),
 			Err(LexerError::UnexpectedChar(
 				'.',
-				TokenSpan { start: 1, end: 2 }
+				TokenSpan { start: 1, end: 2 },
 			))
 		);
 	}
@@ -336,7 +344,8 @@ mod tests {
 			l.lex_ident().unwrap(),
 			Token {
 				kind: TokenKind::KeywordVar,
-				span: TokenSpan { start: 0, end: 3 }
+				span: TokenSpan { start: 0, end: 3 },
+				orig: "var".to_string(),
 			}
 		);
 	}
@@ -348,7 +357,8 @@ mod tests {
 			l.lex_ident().unwrap(),
 			Token {
 				kind: TokenKind::KeywordVar,
-				span: TokenSpan { start: 0, end: 3 }
+				span: TokenSpan { start: 0, end: 3 },
+				orig: "var".to_string(),
 			}
 		);
 	}
@@ -360,7 +370,8 @@ mod tests {
 			l.lex_ident().unwrap(),
 			Token {
 				kind: TokenKind::Ident,
-				span: TokenSpan { start: 0, end: 10 }
+				span: TokenSpan { start: 0, end: 10 },
+				orig: "variable_0".to_string(),
 			},
 		)
 	}
@@ -413,7 +424,8 @@ mod tests {
 			vec[0],
 			Token {
 				kind: TokenKind::KeywordVar,
-				span: TokenSpan { start: 0, end: 3 }
+				span: TokenSpan { start: 0, end: 3 },
+				orig: "var".to_string(),
 			}
 		);
 
@@ -421,7 +433,8 @@ mod tests {
 			vec[1],
 			Token {
 				kind: TokenKind::Ident,
-				span: TokenSpan { start: 4, end: 5 }
+				span: TokenSpan { start: 4, end: 5 },
+				orig: "x".to_string(),
 			}
 		);
 
@@ -429,7 +442,8 @@ mod tests {
 			vec[2],
 			Token {
 				kind: TokenKind::Assign,
-				span: TokenSpan { start: 6, end: 7 }
+				span: TokenSpan { start: 6, end: 7 },
+				orig: "=".to_string(),
 			}
 		);
 
@@ -438,6 +452,7 @@ mod tests {
 			Token {
 				kind: TokenKind::Literal(LiteralKind::Int),
 				span: TokenSpan { start: 8, end: 9 },
+				orig: "5".to_string(),
 			}
 		);
 
@@ -445,7 +460,8 @@ mod tests {
 			vec[4],
 			Token {
 				kind: TokenKind::Semicolon,
-				span: TokenSpan { start: 9, end: 10 }
+				span: TokenSpan { start: 9, end: 10 },
+				orig: ";".to_string(),
 			}
 		);
 
@@ -453,7 +469,8 @@ mod tests {
 			vec[5],
 			Token {
 				kind: TokenKind::Eof,
-				span: TokenSpan { start: 10, end: 10 }
+				span: TokenSpan { start: 10, end: 10 },
+				orig: "".to_string(),
 			}
 		)
 	}
@@ -470,7 +487,8 @@ mod tests {
 			vec[0],
 			Token {
 				kind: TokenKind::KeywordVar,
-				span: TokenSpan { start: 0, end: 3 }
+				span: TokenSpan { start: 0, end: 3 },
+				orig: "var".to_string(),
 			}
 		);
 
@@ -478,7 +496,8 @@ mod tests {
 			vec[1],
 			Token {
 				kind: TokenKind::Ident,
-				span: TokenSpan { start: 4, end: 5 }
+				span: TokenSpan { start: 4, end: 5 },
+				orig: "x".to_string(),
 			}
 		);
 
@@ -486,7 +505,8 @@ mod tests {
 			vec[2],
 			Token {
 				kind: TokenKind::Assign,
-				span: TokenSpan { start: 6, end: 7 }
+				span: TokenSpan { start: 6, end: 7 },
+				orig: "=".to_string(),
 			}
 		);
 
@@ -495,6 +515,7 @@ mod tests {
 			Token {
 				kind: TokenKind::Literal(LiteralKind::Float),
 				span: TokenSpan { start: 8, end: 11 },
+				orig: "5.5".to_string(),
 			}
 		);
 
@@ -502,7 +523,8 @@ mod tests {
 			vec[4],
 			Token {
 				kind: TokenKind::Semicolon,
-				span: TokenSpan { start: 11, end: 12 }
+				span: TokenSpan { start: 11, end: 12 },
+				orig: ";".to_string(),
 			}
 		);
 
@@ -510,7 +532,8 @@ mod tests {
 			vec[5],
 			Token {
 				kind: TokenKind::Eof,
-				span: TokenSpan { start: 12, end: 12 }
+				span: TokenSpan { start: 12, end: 12 },
+				orig: "".to_string(),
 			}
 		)
 	}
@@ -527,7 +550,8 @@ mod tests {
 			vec[0],
 			Ok(Token {
 				kind: TokenKind::KeywordVar,
-				span: TokenSpan { start: 0, end: 3 }
+				span: TokenSpan { start: 0, end: 3 },
+				orig: "var".to_string(),
 			})
 		);
 
@@ -543,7 +567,8 @@ mod tests {
 			vec[2],
 			Ok(Token {
 				kind: TokenKind::Assign,
-				span: TokenSpan { start: 6, end: 7 }
+				span: TokenSpan { start: 6, end: 7 },
+				orig: "=".to_string(),
 			})
 		);
 
@@ -552,6 +577,7 @@ mod tests {
 			Ok(Token {
 				kind: TokenKind::Literal(LiteralKind::Int),
 				span: TokenSpan { start: 8, end: 9 },
+				orig: "5".to_string(),
 			})
 		);
 
@@ -559,7 +585,8 @@ mod tests {
 			vec[4],
 			Ok(Token {
 				kind: TokenKind::Semicolon,
-				span: TokenSpan { start: 9, end: 10 }
+				span: TokenSpan { start: 9, end: 10 },
+				orig: ";".to_string(),
 			})
 		);
 
@@ -567,7 +594,8 @@ mod tests {
 			vec[5],
 			Ok(Token {
 				kind: TokenKind::Eof,
-				span: TokenSpan { start: 10, end: 10 }
+				span: TokenSpan { start: 10, end: 10 },
+				orig: "".to_string(),
 			})
 		)
 	}

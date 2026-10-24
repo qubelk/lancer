@@ -1,4 +1,5 @@
 use crate::lexer::token::Token;
+use crate::lexer::token::TokenKind;
 
 pub struct ParserCursor {
 	tokens: Vec<Token>,
@@ -6,7 +7,7 @@ pub struct ParserCursor {
 }
 
 impl ParserCursor {
-	fn new(tokens: Vec<Token>) -> Self {
+	pub fn new(tokens: Vec<Token>) -> Self {
 		Self { tokens, pos: 0 }
 	}
 
@@ -18,20 +19,24 @@ impl ParserCursor {
 		self.tokens.get(self.pos)
 	}
 
+	pub fn peek_kind(&mut self) -> Option<&TokenKind> {
+		Some(&self.peek()?.kind)
+	}
+
 	pub fn next(&mut self) -> Option<Token> {
 		let t = self.peek().cloned();
 		self.pos += 1;
 		t
 	}
 
-	pub fn expect(&mut self, expected: &Token) -> Result<(), ParseError> {
-		if self.peek() == Some(expected) {
+	pub fn expect(&mut self, expected: &TokenKind) -> Result<(), ParseError> {
+		if self.peek_kind() == Some(expected) {
 			self.pos += 1;
 			Ok(())
 		} else {
 			Err(ParseError::Unexpected(
-				self.peek().cloned(),
-				*expected,
+				self.peek_kind().cloned(),
+				expected.clone(),
 				self.pos,
 			))
 		}
@@ -40,5 +45,6 @@ impl ParserCursor {
 
 pub enum ParseError {
 	// Obtained, Expected, Position
-	Unexpected(Option<Token>, Token, usize),
+	Unexpected(Option<TokenKind>, TokenKind, usize),
+	ExpectedIdent,
 }

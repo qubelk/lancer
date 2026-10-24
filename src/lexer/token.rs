@@ -1,16 +1,17 @@
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Token {
 	pub kind: TokenKind,
 	pub span: TokenSpan,
+	pub orig: String,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum LiteralKind {
 	Int,
 	Float,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum TokenKind {
 	KeywordVar,
 	Ident,
@@ -20,7 +21,7 @@ pub enum TokenKind {
 	Eof,
 }
 
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct TokenSpan {
 	pub start: usize,
 	pub end: usize,

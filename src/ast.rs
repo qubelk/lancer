@@ -1,4 +1,4 @@
-enum LiteralKind {
+pub enum LiteralKind {
 	Int(i64),
 	Float(f64),
 }
